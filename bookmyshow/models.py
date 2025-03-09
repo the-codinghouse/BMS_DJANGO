@@ -1,3 +1,6 @@
+import random
+import string
+
 from django.utils import timezone
 
 from django.db import models
@@ -71,7 +74,7 @@ class Show(BaseModel):
 
 
 # model 10
-class SeatType(BaseModel):
+class SeatType(models.TextChoices):
     GOLD = 'GOLD', 'Gold'
     SILVER = 'SILVER', 'Silver'
     PLATINUM = 'PLATINUM', 'Platinum'
@@ -81,8 +84,8 @@ class SeatType(BaseModel):
 class Seat(BaseModel):
     row_number = models.IntegerField()
     col_number = models.IntegerField()
-    number = models.IntegerField(max_length=50)
-    seat_type = models.CharField(max_length=50, choices=SeatType)
+    number = models.IntegerField()  # max_length is not needed for IntegerField
+    seat_type = models.CharField(max_length=50, choices=SeatType.choices)  # Use .choices
 
 
 # model 12
@@ -98,13 +101,13 @@ class ShowSeatStatus(models.TextChoices):
 class ShowSeat(BaseModel):
     show = models.ForeignKey(Show, on_delete=models.CASCADE)
     seat = models.ForeignKey(Seat, on_delete=models.CASCADE)
-    show_seat_status = models.TextField(choices=ShowSeatStatus)
+    show_seat_status = models.CharField(max_length=50, choices=ShowSeatStatus.choices)
 
 
 # model 14
 class ShowSeatType(BaseModel):
     show = models.ForeignKey(Show, on_delete=models.CASCADE)
-    seat_type = models.ForeignKey(SeatType, on_delete=models.CASCADE)
+    seat_type = models.CharField(max_length=50, choices=SeatType.choices)  # Changed ForeignKey to CharField
     price = models.IntegerField()
 
 
@@ -136,18 +139,30 @@ class PaymentStatus(models.TextChoices):
 
 # model 18
 class Ticket(BaseModel):
-    ticket_number = models.IntegerField()
+    ticket_number = models.CharField(max_length=12, unique=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     show = models.ForeignKey(Show, on_delete=models.CASCADE)
     show_seats = models.ManyToManyField(ShowSeat)
     amount = models.IntegerField()
-    booking_status = models.TextField(choices=BookingStatus)
+    booking_status = models.CharField(max_length=50, choices=BookingStatus.choices)
+
+    def generate_ticket_number(self):
+        """Generate a unique ticket number"""
+        while True:
+            ticket_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+            if not Ticket.objects.filter(ticket_number=ticket_number).exists():
+                return ticket_number
+
+    def save(self, *args, **kwargs):
+        if not self.ticket_number:
+            self.ticket_number = self.generate_ticket_number()
+        super().save(*args, **kwargs)
 
 
 # model 19
 class Payment(BaseModel):
     ref_number = models.IntegerField()
     amount = models.IntegerField()
-    mode = models.CharField(choices=PaymentMode)
-    status = models.CharField(choices=PaymentStatus)
+    mode = models.CharField(max_length=50, choices=PaymentMode.choices)
+    status = models.CharField(max_length=50, choices=PaymentStatus.choices)
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)

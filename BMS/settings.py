@@ -80,8 +80,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'bms',
-        'USER': 'admin',
-        'PASSWORD': 'admin',
+        'USER': 'BMS2User',
         'HOST': '127.0.0.1',
         'PORT': '3306',
     }
